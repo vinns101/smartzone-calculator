@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SmartZone Resource Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .note { font-size: 0.875rem; color: #555; margin-top: 0.5rem; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 p-6">
+  <div class="max-w-2xl mx-auto bg-white p-6 rounded shadow">
+    <h2 class="text-2xl font-semibold mb-4">SmartZone Resource Calculator</h2>
+
+    <div class="space-y-4">
+      <label class="block">
+        <span class="text-sm font-medium">SmartZone Version</span>
+        <select id="version" class="mt-1 block w-full border-gray-300 rounded"></select>
+        <div id="versionNote" class="note"></div>
+        <div id="apList" class="note"></div>
+        <div id="szList" class="note"></div>
+        <div id="switchList" class="note"></div>
+        <div id="platformInfo" class="note mt-2"></div>
+      </label>
+
+      <label class="block">
+        <span class="text-sm font-medium">Deployment Type</span>
+        <select id="deploymentType" class="mt-1 block w-full border-gray-300 rounded">
+          <option value="on_prem">On-Prem</option>
+          <option value="nutanix">Nutanix</option>
+          <option value="cloud">Public Cloud</option>
+        </select>
+      </label>
+
+      <label class="block">
+        <span class="text-sm font-medium">APs (Dual-band)</span>
+        <input type="number" id="AP_dual_band_qty" value="100" max="30000" class="mt-1 block w-full border-gray-300 rounded">
+      </label>
+
+      <label class="block">
+        <span class="text-sm font-medium">APs (Tri-band)</span>
+        <input type="number" id="AP_tri_band_qty" value="50" max="30000" class="mt-1 block w-full border-gray-300 rounded">
+      </label>
+
+      <label class="block">
+        <span class="text-sm font-medium">ICX Switches</span>
+        <input type="number" id="ICX_qty" value="20" max="5000" class="mt-1 block w-full border-gray-300 rounded">
+      </label>
+
+      <label class="block">
+        <span class="text-sm font-medium">Ruckus Edge Devices</span>
+        <input type="number" id="Edge_qty" value="10" max="5000" class="mt-1 block w-full border-gray-300 rounded">
+      </label>
+    </div>
+
+    <div class="mt-6 flex gap-4">
+      <button onclick="runCalculator()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        Calculate
+      </button>
+    </div>
+
+    <div id="results" class="mt-6 p-4 bg-gray-100 border rounded text-sm"></div>
+  </div>
+
+  <script>
+    const fallbackVersions = [
+      {
+        id: "6.1.2",
+        status: "LT-GD Patch 3",
+        notes: "Best for Wi-Fi 6 APs like R750, T750",
+        supportedAPs: ["R750", "T750", "H350", "R650"],
+        supportedSZModels: ["SZ300", "vSZ-H", "vSZ-E"],
+        supportedSwitches: ["ICX 7650", "ICX 7850"],
+        platforms: {
+          hypervisors: ["Debian KVM", "OpenStack", "Hyper-V 2022", "Nutanix CE 2.1", "VMware ESXi 6.7+"],
+          clouds: ["AWS", "Azure"],
+          unsupported: ["Sangfor HCI", "VMware Workstation", "Oracle VirtualBox"],
+          note: "Deploying vSZ on unsupported platforms may prevent Ruckus from providing support."
+        }
+      },
+      {
+        id: "7.0.0",
+        status: "GA",
+        notes: "Supports Wi-Fi 6E APs like R560, R670",
+        supportedAPs: ["R560", "R670", "T670"],
+        supportedSZModels: ["vSZ-H", "vSZ-E"],
+        supportedSwitches: ["ICX 7850", "ICX 8200"],
+        platforms: {
+          hypervisors: ["Debian KVM", "OpenStack", "Hyper-V 2022", "Nutanix CE 2.1", "Proxmox VE 8.2.2", "Rocky Linux 9.4", "VMware ESXi 7.0+"],
+          clouds: ["AWS", "Google Cloud", "Azure"],
+          unsupported: ["Sangfor HCI", "VMware Workstation", "Oracle VirtualBox"],
+          note: "SmartZone 7.0.0 introduces support for Rocky Linux and Proxmox VE."
+        }
+      },
+      {
+        id: "7.1.0",
+        status: "LT-GA",
+        notes: "Supports Wi-Fi 7 APs like R670, T670sn",
+        supportedAPs: ["R670", "T670sn", "R770"],
+        supportedSZModels: ["vSZ-H", "vSZ-E"],
+        supportedSwitches: ["ICX 8200", "ICX 8300"],
+        platforms: {
+          hypervisors: ["Debian KVM", "OpenStack", "Hyper-V 2022", "Nutanix CE 2.1", "Proxmox VE 8.2.2", "Rocky Linux 9.4", "VMware ESXi 7.0+"],
+          clouds: ["AWS", "Google Cloud", "Azure"],
+          unsupported: ["Sangfor HCI", "VMware Workstation", "Oracle VirtualBox"],
+          note: "SmartZone 7.1.0 is optimized for Wi-Fi 7 and high-density deployments."
+        }
+      }
+    ];
+
+    const resourceProfiles = {
+      "6.1.2": [
+        { max: 100, CPU: 4, RAM: 13, Storage: 150, nodes: 1 },
+        { max: 500, CPU: 4, RAM: 16, Storage: 150, nodes: 1 },
+        { max: 1024, CPU: 8, RAM: 20, Storage: 250, nodes: 2 },
+        { max: 3000, CPU: 8, RAM: 20, Storage: 250, nodes: 2 }
+      ],
+      "7.0.0": [
+        { max: 100, CPU: 2, RAM: 16, Storage: 150, DiskIO: 15, AWS: "r5.large", Azure: "DS11_v2 / D4s_v3", nodes: 1 },
+        { max: 500, CPU: 4, RAM: 16, Storage: 150, DiskIO: 15, AWS: "m5.xlarge", Azure: "D4s_v3", nodes: 1 },
+        { max: 1000, CPU: 4, RAM: 32, Storage: 150, DiskIO: 20, AWS: "r5.xlarge", Azure: "E4s_v3", nodes: 2 },
+        { max: 3000, CPU: 8, RAM: 32, Storage: 300, DiskIO: 25, AWS: "m5.2xlarge", Azure: "D8s_v3", nodes: 2 },
+        { max: 6000, CPU: 16, RAM: 64, Storage: 300, DiskIO: 35, AWS: "m5.4xlarge", Azure: "D16s_v3", nodes: 3 },
+        { max: 10000, CPU: 24, RAM: 48, Storage: 600, DiskIO: 45, AWS: "c5.9xlarge", Azure: "F32s_v2", nodes: 4 },
+        { max: 30000, CPU: 24, RAM: 56, Storage: 600, DiskIO: 45, AWS: "c5.9xlarge", Azure: "F32s_v2", nodes: 4 }
+      ]
+    };
+
+    const deviceImpact = {
+      ICX: { CPU: 0.05, RAM: 0.1, Storage: 0.2 },
+      Edge: { CPU: 0.1, RAM: 0.2, Storage: 0.4 }
+    };
+
+    function getTier(apCount, version) {
+      const tiers = resourceProfiles[version];
+      return tiers.find(t => apCount <= t.max) || tiers[tiers.length - 1];
+    }
+
+    function updateVersionDetails() {
+      const version = document.getElementById("version").value;
+      const selected = fallbackVersions.find(v => v.id === version);
+
+      document.getElementById("versionNote").textContent = selected?.notes || "";
+
+      document.getElementById("apList").innerHTML = `<strong>Supported APs:</strong> ${selected.supportedAPs.join(", ")}`;
+      document.getElementById("szList").innerHTML = `<strong>Supported SZ Models:</strong> ${selected.supportedSZModels.join(", ")}`;
+      document.getElementById("switchList").innerHTML = `<strong>Supported ICX Switches:</strong> ${selected.supportedSwitches.join(", ")}`;
+      document.getElementById("platformInfo").innerHTML = `
+        <strong>Supported Platforms (${selected.id}):</strong><br>
+        Hypervisors: ${selected.platforms.hypervisors.join(", ")}<br>
+        Public Cloud: ${selected.platforms.clouds.join(", ")}<br>
+        <span class="text-red-600">Unsupported: ${selected.platforms.unsupported.join(", ")}</span><br>
+        <em>${selected.platforms.note}</em>
+      `;
+    }
+
+    function runCalculator() {
+      const version = document.getElementById("version").value;
+      const deploy = document.getElementById("deploymentType").value;
+      const dual = parseInt(document.getElementById("AP_dual_band_qty").value) || 0;
+      const tri = parseInt(document.getElementById("AP_tri_band_qty").value) || 0;
+      const icx = parseInt(document.getElementById("ICX_qty").value) || 0;
+      const edge = parseInt(document.getElementById("Edge_qty").value) || 0;
+
+      if (dual > 30000 || tri > 30000 || icx > 5000 || edge > 5000) {
+        alert("Input exceeds supported limits:\n- Max APs: 30,000\n- Max Switches: 5,000\n- Max Edge Devices: 5,000");
+        return;
+      }
+
+      const totalAPs = dual + tri;
+      const tier = getTier(totalAPs, version);
+
+      const extraCPU = icx * deviceImpact.ICX.CPU + edge * deviceImpact.Edge.CPU;
+      const extraRAM = icx * deviceImpact.ICX.RAM + edge * deviceImpact.Edge.RAM;
+      const extraStorage = icx * deviceImpact.ICX.Storage + edge * deviceImpact.Edge.Storage;
+
+      const finalCPU = Math.ceil(tier.CPU + extraCPU);
+      const finalRAM = Math.ceil(tier.RAM + extraRAM);
+      const finalStorage = Math.ceil(tier.Storage + extraStorage);
+
+      let feedback = "";
+      if (deploy === "nutanix" && totalAPs >= 7500) {
+        feedback += `<br><span class="text-orange-600">⚠️ Nutanix overhead: Increase RAM to 50GB or reduce AP count below 7500.</span>`;
+      }
+      if (icx + edge > 50) {
+        feedback += `<br><span class="text-blue-600">ℹ️ Consider clustering or scaling controller resources for environments with more than 50 edge devices.</span>`;
+      }
+
+      let output = `
+        <strong>Recommended Resource Requirements:</strong><br>
+        SmartZone Version: ${version} | Deployment: ${deploy}<br>
+        AP Count: ${totalAPs}<br><br>
+        <div class="space-y-2">
+          <div><strong>CPU Cores:</strong> ${finalCPU}</div>
+          <div class="w-full bg-gray-200 rounded h-4">
+            <div class="bg-blue-600 h-4 rounded" style="width: ${Math.min(finalCPU * 4, 100)}%;"></div>
+          </div>
+
+          <div><strong>RAM:</strong> ${finalRAM} GB</div>
+          <div class="w-full bg-gray-200 rounded h-4">
+            <div class="bg-green-600 h-4 rounded" style="width: ${Math.min(finalRAM * 2, 100)}%;"></div>
+          </div>
+
+          <div><strong>Storage:</strong> ${finalStorage} GB</div>
+          <div class="w-full bg-gray-200 rounded h-4">
+            <div class="bg-yellow-500 h-4 rounded" style="width: ${Math.min(finalStorage / 2, 100)}%;"></div>
+          </div>
+
+          <div><strong>Recommended Nodes per Cluster:</strong> ${tier.nodes}</div>
+
+          <div class="mt-4">
+            <strong>ICX Switches:</strong> ${icx} units
+            <ul class="list-disc ml-6 text-sm">
+              <li>Per Switch: ${deviceImpact.ICX.CPU} CPU, ${deviceImpact.ICX.RAM} GB RAM</li>
+              <li>Total: <strong>${(icx * deviceImpact.ICX.CPU).toFixed(2)} CPU</strong>, <strong>${(icx * deviceImpact.ICX.RAM).toFixed(2)} GB RAM</strong></li>
+            </ul>
+          </div>
+
+          <div class="mt-2">
+            <strong>Edge Devices:</strong> ${edge} units
+            <ul class="list-disc ml-6 text-sm">
+              <li>Per Device: ${deviceImpact.Edge.CPU} CPU, ${deviceImpact.Edge.RAM} GB RAM</li>
+              <li>Total: <strong>${(edge * deviceImpact.Edge.CPU).toFixed(2)} CPU</strong>, <strong>${(edge * deviceImpact.Edge.RAM).toFixed(2)} GB RAM</strong></li>
+            </ul>
+          </div>
+      `;
+
+      if (version.startsWith("7.")) {
+        output += `
+          <div class="mt-4"><strong>Disk I/O:</strong> ${tier.DiskIO} MiB/s</div>
+          <div><strong>AWS Instance:</strong> ${tier.AWS}</div>
+          <div><strong>Azure Instance:</strong> ${tier.Azure}</div>
+        `;
+      }
+
+      output += `
+        </div>
+        ${feedback}
+        <em class="text-xs text-gray-500 block mt-4">Note: ICX and Edge device estimates are based on SmartZone deployment guidelines and field-tested sizing.</em>
+      `;
+
+      document.getElementById("results").innerHTML = output;
+    }
+
+    window.onload = () => {
+      fallbackVersions.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v.id;
+        opt.textContent = `${v.id} (${v.status})`;
+        document.getElementById("version").appendChild(opt);
+      });
+      updateVersionDetails();
+      document.getElementById("version").onchange = updateVersionDetails;
+    };
+  </script>
+</body>
+</html>
