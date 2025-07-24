@@ -69,8 +69,17 @@
     </div>
 
     <div id="results" class="mt-6 p-4 bg-gray-100 border rounded text-sm"></div>
+    <div id="essentialsWarning" class="mt-2 text-red-600 text-sm hidden"></div>
   </div>
 
+  <!-- Custom Popup -->
+  <div id="popup" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white p-6 rounded shadow-lg max-w-md text-center">
+      <h3 class="text-lg font-semibold mb-2 text-red-600">Input Limit Exceeded</h3>
+      <p id="popupMessage" class="text-sm text-gray-700 mb-4"></p>
+      <button onclick="closePopup()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">OK</button>
+    </div>
+  </div>
   <script>
     const fallbackVersions = [
       {
@@ -125,28 +134,23 @@
         { max: 3000, CPU: 8, RAM: 20, Storage: 250, nodes: 2 }
       ],
       "7.0.0": [
-        { max: 100, CPU: 2, RAM: 16, Storage: 150, DiskIO: 15, AWS: "r5.large", Azure: "DS11_v2 / D4s_v3", nodes: 1 },
-        { max: 500, CPU: 4, RAM: 16, Storage: 150, DiskIO: 15, AWS: "m5.xlarge", Azure: "D4s_v3", nodes: 1 },
-        { max: 1000, CPU: 4, RAM: 32, Storage: 150, DiskIO: 20, AWS: "r5.xlarge", Azure: "E4s_v3", nodes: 2 },
-        { max: 3000, CPU: 8, RAM: 32, Storage: 300, DiskIO: 25, AWS: "m5.2xlarge", Azure: "D8s_v3", nodes: 2 },
-        { max: 6000, CPU: 16, RAM: 64, Storage: 300, DiskIO: 35, AWS: "m5.4xlarge", Azure: "D16s_v3", nodes: 3 },
-        { max: 10000, CPU: 24, RAM: 48, Storage: 600, DiskIO: 45, AWS: "c5.9xlarge", Azure: "F32s_v2", nodes: 4 },
-        { max: 30000, CPU: 24, RAM: 56, Storage: 600, DiskIO: 45, AWS: "c5.9xlarge", Azure: "F32s_v2", nodes: 4 }
+        { max: 100, CPU: 2, RAM: 16, Storage: 150, DiskIO: 15, nodes: 1 },
+        { max: 500, CPU: 4, RAM: 16, Storage: 150, DiskIO: 15, nodes: 1 },
+        { max: 1000, CPU: 4, RAM: 32, Storage: 150, DiskIO: 20, nodes: 2 },
+        { max: 3000, CPU: 8, RAM: 32, Storage: 300, DiskIO: 25, nodes: 2 },
+        { max: 6000, CPU: 16, RAM: 64, Storage: 300, DiskIO: 35, nodes: 3 },
+        { max: 10000, CPU: 24, RAM: 48, Storage: 600, DiskIO: 45, nodes: 4 },
+        { max: 30000, CPU: 24, RAM: 56, Storage: 600, DiskIO: 45, nodes: 4 }
       ],
-            "7.1.0": [
-        { max: 100, CPU: 2, RAM: 16, Storage: 150, DiskIO: 15, AWS: "r5.large", Azure: "DS11_v2 / D4s_v3", nodes: 1 },
-        { max: 500, CPU: 4, RAM: 16, Storage: 150, DiskIO: 15, AWS: "m5.xlarge", Azure: "D4s_v3", nodes: 1 },
-        { max: 1000, CPU: 4, RAM: 32, Storage: 150, DiskIO: 20, AWS: "r5.xlarge", Azure: "E4s_v3", nodes: 2 },
-        { max: 3000, CPU: 8, RAM: 32, Storage: 300, DiskIO: 25, AWS: "m5.2xlarge", Azure: "D8s_v3", nodes: 2 },
-        { max: 6000, CPU: 16, RAM: 64, Storage: 300, DiskIO: 35, AWS: "m5.4xlarge", Azure: "D16s_v3", nodes: 3 },
-        { max: 10000, CPU: 24, RAM: 48, Storage: 600, DiskIO: 45, AWS: "c5.9xlarge", Azure: "F32s_v2", nodes: 4 },
-        { max: 30000, CPU: 24, RAM: 56, Storage: 600, DiskIO: 45, AWS: "c5.9xlarge", Azure: "F32s_v2", nodes: 4 }
+      "7.1.0": [
+        { max: 100, CPU: 2, RAM: 16, Storage: 150, DiskIO: 15, nodes: 1 },
+        { max: 500, CPU: 4, RAM: 16, Storage: 150, DiskIO: 15, nodes: 1 },
+        { max: 1000, CPU: 4, RAM: 32, Storage: 150, DiskIO: 20, nodes: 2 },
+        { max: 3000, CPU: 8, RAM: 32, Storage: 300, DiskIO: 25, nodes: 2 },
+        { max: 6000, CPU: 16, RAM: 64, Storage: 300, DiskIO: 35, nodes: 3 },
+        { max: 10000, CPU: 24, RAM: 48, Storage: 600, DiskIO: 45, nodes: 4 },
+        { max: 30000, CPU: 24, RAM: 56, Storage: 600, DiskIO: 45, nodes: 4 }
       ]
-    };
-
-    const deviceImpact = {
-      ICX: { CPU: 0.05, RAM: 0.1, Storage: 0.2 },
-      Edge: { CPU: 0.1, RAM: 0.2, Storage: 0.4 }
     };
 
     const controllerOverhead = {
@@ -154,12 +158,27 @@
       highscale: { CPU: 2, RAM: 4, Storage: 50, maxNodes: 4 }
     };
 
+    const deploymentOverhead = {
+      on_prem: { CPU: 0, RAM: 0, Storage: 0 },
+      nutanix: { CPU: 1, RAM: 6, Storage: 50 },
+      cloud:   { CPU: 2, RAM: 4, Storage: 100 }
+    };
+
+    const deployNote = {
+      on_prem: "On-Prem deployment: No additional overhead applied.",
+      nutanix: "Nutanix deployment: Includes controller RAM and storage overhead.",
+      cloud: "Cloud deployment: Includes buffer for virtualization overhead."
+    };
+
+    const deviceImpact = {
+      ICX: { CPU: 0.05, RAM: 0.1, Storage: 0.2 },
+      Edge: { CPU: 0.1, RAM: 0.2, Storage: 0.4 }
+    };
+
     function getTier(apCount, version) {
       const controllerType = document.getElementById("controllerType").value;
       const tiers = resourceProfiles[version];
-      const filtered = controllerType === "essentials"
-        ? tiers.filter(t => t.max <= 1024)
-        : tiers;
+      const filtered = controllerType === "essentials" ? tiers.filter(t => t.max <= 1024) : tiers;
       return filtered.find(t => apCount <= t.max) || filtered[filtered.length - 1];
     }
 
@@ -179,6 +198,15 @@
       `;
     }
 
+    function showPopup(message) {
+      document.getElementById("popupMessage").textContent = message;
+      document.getElementById("popup").classList.remove("hidden");
+    }
+
+    function closePopup() {
+      document.getElementById("popup").classList.add("hidden");
+    }
+
     function runCalculator() {
       const version = document.getElementById("version").value;
       const controllerType = document.getElementById("controllerType").value;
@@ -188,73 +216,49 @@
       const icx = parseInt(document.getElementById("ICX_qty").value) || 0;
       const edge = parseInt(document.getElementById("Edge_qty").value) || 0;
 
-      if (dual > 30000 || tri > 30000 || icx > 5000 || edge > 5000) {
-        alert("Input exceeds supported limits:\n- Max APs: 30,000\n- Max Switches: 5,000\n- Max Edge Devices: 5,000");
+      const totalAPs = dual + tri;
+
+      let limitMsg = "";
+      if (totalAPs > 30000) limitMsg += "- APs must not exceed 30,000\n";
+      if (icx > 5000) limitMsg += "- ICX Switches must not exceed 5,000\n";
+      if (edge > 5000) limitMsg += "- Edge Devices must not exceed 5,000\n";
+      if (limitMsg) {
+        showPopup("You've exceeded one or more input limits:\n" + limitMsg);
         return;
       }
 
-      const totalAPs = dual + tri;
+      const essentialsWarning = document.getElementById("essentialsWarning");
+      if (controllerType === "essentials" && totalAPs > 1024) {
+        essentialsWarning.textContent = "⚠️ vSZ-Essentials supports up to ~1,024 APs. Consider switching to vSZ-High Scale.";
+        essentialsWarning.classList.remove("hidden");
+      } else {
+        essentialsWarning.classList.add("hidden");
+      }
+
       const tier = getTier(totalAPs, version);
       const overhead = controllerOverhead[controllerType];
+      const deployOverhead = deploymentOverhead[deploy];
 
       const extraCPU = icx * deviceImpact.ICX.CPU + edge * deviceImpact.Edge.CPU;
       const extraRAM = icx * deviceImpact.ICX.RAM + edge * deviceImpact.Edge.RAM;
       const extraStorage = icx * deviceImpact.ICX.Storage + edge * deviceImpact.Edge.Storage;
 
-      const finalCPU = Math.ceil(tier.CPU + extraCPU + overhead.CPU);
-      const finalRAM = Math.ceil(tier.RAM + extraRAM + overhead.RAM);
-      const finalStorage = Math.ceil(tier.Storage + extraStorage + overhead.Storage);
+      const finalCPU = Math.ceil(tier.CPU + extraCPU + overhead.CPU + deployOverhead.CPU);
+      const finalRAM = Math.ceil(tier.RAM + extraRAM + overhead.RAM + deployOverhead.RAM);
+      const finalStorage = Math.ceil(tier.Storage + extraStorage + overhead.Storage + deployOverhead.Storage);
 
-      let feedback = "";
-      if (controllerType === "essentials" && totalAPs > 1024) {
-        feedback += `<br><span class="text-red-600">⚠️ vSZ-Essentials supports up to ~1,024 APs. Consider switching to vSZ-High Scale.</span>`;
-      }
-      if (deploy === "nutanix" && totalAPs >= 7500) {
-        feedback += `<br><span class="text-orange-600">⚠️ Nutanix overhead: Increase RAM to 50GB or reduce AP count below 7500.</span>`;
-      }
-      if (icx + edge > 50) {
-        feedback += `<br><span class="text-blue-600">ℹ️ Consider clustering or scaling controller resources for environments with more than 50 edge devices.</span>`;
-      }
-
-      let output = `
+      const output = `
         <strong>Recommended Resource Requirements:</strong><br>
-        SmartZone Version: ${version} | Controller: ${controllerType} | Deployment: ${deploy}<br>
-        AP Count: ${totalAPs}<br>
-        <div class="text-sm text-gray-600 italic mt-1">
-          ${controllerType === "essentials"
-            ? "vSZ-Essentials: Optimized for small deployments and single-node clusters."
-            : "vSZ-High Scale: Designed for large-scale clustering and high-density AP environments."}
-        </div><br>
-        <div class="space-y-2">
-          <div><strong>CPU Cores:</strong> ${finalCPU}</div>
-          <div class="w-full bg-gray-200 rounded h-4">
-            <div class="bg-blue-600 h-4 rounded" style="width: ${Math.min(finalCPU * 4, 100)}%;"></div>
-          </div>
-
-          <div><strong>RAM:</strong> ${finalRAM} GB</div>
-          <div class="w-full bg-gray-200 rounded h-4">
-            <div class="bg-green-600 h-4 rounded" style="width: ${Math.min(finalRAM * 2, 100)}%;"></div>
-          </div>
-
-          <div><strong>Storage:</strong> ${finalStorage} GB</div>
-          <div class="w-full bg-gray-200 rounded h-4">
-            <div class="bg-yellow-500 h-4 rounded" style="width: ${Math.min(finalStorage / 2, 100)}%;"></div>
-          </div>
-
-          <div><strong>Recommended Nodes per Cluster:</strong> ${Math.min(tier.nodes, overhead.maxNodes)}</div>
-      `;
-
-      if (version.startsWith("7.")) {
-        output += `
-          <div class="mt-4"><strong>Disk I/O:</strong> ${tier.DiskIO} MiB/s</div>
-          <div><strong>AWS Instance:</strong> ${tier.AWS}</div>
-          <div><strong>Azure Instance:</strong> ${tier.Azure}</div>
-        `;
-      }
-
-      output += `
-        ${feedback}
-        <em class="text-xs text-gray-500 block mt-4">Note: ICX and Edge device estimates are based on SmartZone deployment guidelines and field-tested sizing.</em>
+        SmartZone Version: ${version}<br>
+        Controller Type: ${controllerType}<br>
+        Deployment Type: ${deploy}<br>
+        Total APs: ${totalAPs}<br><br>
+        <strong>CPU Cores:</strong> ${finalCPU}<br>
+        <strong>RAM:</strong> ${finalRAM} GB<br>
+        <strong>Storage:</strong> ${finalStorage} GB<br>
+        <strong>Disk I/O:</strong> ${tier.DiskIO || "N/A"} MiB/s<br>
+        <strong>Recommended Nodes:</strong> ${Math.min(tier.nodes, overhead.maxNodes)}<br><br>
+        <em class="text-sm text-gray-600">${deployNote[deploy]}</em>
       `;
 
       document.getElementById("results").innerHTML = output;
@@ -268,7 +272,7 @@
         document.getElementById("version").appendChild(opt);
       });
       updateVersionDetails();
-      document.getElementById("version").document.getElementById("version").onchange = updateVersionDetails;
+      document.getElementById("version").onchange = updateVersionDetails;
     };
   </script>
 </body>
