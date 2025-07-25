@@ -64,6 +64,7 @@
     </div>
 
     <div id="results" class="mt-6 p-4 bg-gray-100 border rounded text-sm"></div>
+    <div id="versionDetails" class="mt-6 p-4 bg-white border rounded text-sm shadow"></div>
     <div id="essentialsWarning" class="mt-2 text-red-600 text-sm hidden"></div>
     <div class="text-xs text-gray-500 mt-4">Profiles last updated: July 2025</div>
   </div>
@@ -112,6 +113,46 @@
           select.appendChild(opt);
         });
       }
+const versionSupportData = {
+  "7.1.0": {
+    supportedAPs: ["R760", "R560", "R750", "T750", "H550"],
+    legacyAPs: [],
+    switches: ["ICX 7150", "ICX 7250", "ICX 7450", "ICX 7650", "ICX 7850"],
+    platforms: ["VMware ESXi 6.7+", "Hyper-V 2022", "AWS", "Azure", "Nutanix CE 2.1"],
+    unsupported: ["Sangfor HCI", "VMware Workstation", "Oracle VirtualBox"]
+  },
+  "6.1.2": {
+    supportedAPs: ["R750", "T750", "R650", "H350"],
+    legacyAPs: ["ZF7372", "R700"],
+    switches: ["ICX 7150", "ICX 7250", "ICX 7450", "ICX 7650", "ICX 7850"],
+    platforms: ["VMware ESXi 6.7+", "Hyper-V 2022", "AWS", "Azure", "Nutanix CE 2.1"],
+    unsupported: ["Sangfor HCI", "VMware Workstation", "Oracle VirtualBox"]
+  }
+};
+
+versionSupportData["7.0.0"] = JSON.parse(JSON.stringify(versionSupportData["7.1.0"]));
+
+function showVersionDetails(version) {
+  const data = versionSupportData[version];
+  if (!data) {
+    document.getElementById("versionDetails").innerHTML = `<span class="text-gray-500">No compatibility data available for version ${version}.</span>`;
+    return;
+  }
+
+  const html = `
+    <h3 class="text-lg font-semibold mb-2">Compatibility for SmartZone ${version}</h3>
+    <strong>Supported APs:</strong> ${data.supportedAPs.join(", ")}<br>
+    ${data.legacyAPs.length ? `<strong>Legacy APs:</strong> ${data.legacyAPs.join(", ")}<br>` : ""}
+    <strong>Supported ICX Switches:</strong> ${data.switches.join(", ")}<br>
+    <strong>Supported Platforms:</strong> ${data.platforms.join(", ")}<br>
+    <strong class="text-red-600">Unsupported Platforms:</strong> ${data.unsupported.join(", ")}
+  `;
+  document.getElementById("versionDetails").innerHTML = html;
+}
+
+document.getElementById("version").addEventListener("change", (e) => {
+  showVersionDetails(e.target.value);
+});
 
       function getTier(apCount, version, controllerType, deploymentType) {
         const versionData = resourceData[version];
@@ -199,6 +240,8 @@
   `;
 
   document.getElementById("results").innerHTML = output;
+  showVersionDetails(version);
+
 }
 
 
