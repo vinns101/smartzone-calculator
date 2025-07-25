@@ -17,11 +17,6 @@
       <label class="block">
         <span class="text-sm font-medium">SmartZone Version</span>
         <select id="version" class="mt-1 block w-full border-gray-300 rounded"></select>
-        <div id="versionNote" class="note"></div>
-        <div id="apList" class="note"></div>
-        <div id="szList" class="note"></div>
-        <div id="switchList" class="note"></div>
-        <div id="platformInfo" class="note mt-2"></div>
       </label>
 
       <label class="block">
@@ -36,8 +31,8 @@
         <span class="text-sm font-medium">Deployment Type</span>
         <select id="deploymentType" class="mt-1 block w-full border-gray-300 rounded">
           <option value="on_prem">On-Prem</option>
-          <option value="nutanix">Nutanix</option>
           <option value="cloud">Cloud</option>
+          <option value="nutanix">Nutanix</option>
         </select>
       </label>
 
@@ -70,6 +65,7 @@
 
     <div id="results" class="mt-6 p-4 bg-gray-100 border rounded text-sm"></div>
     <div id="essentialsWarning" class="mt-2 text-red-600 text-sm hidden"></div>
+    <div class="text-xs text-gray-500 mt-4">Profiles last updated: July 2025</div>
   </div>
 
   <!-- Custom Popup -->
@@ -80,200 +76,135 @@
       <button onclick="closePopup()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">OK</button>
     </div>
   </div>
+
   <script>
-    const fallbackVersions = [
-      {
-        id: "6.1.2",
-        status: "LT-GD Patch 3",
-        notes: "Best for Wi-Fi 6 APs like R750, T750",
-        supportedAPs: ["R750", "T750", "H350", "R650"],
-        supportedSZModels: ["SZ300", "vSZ-H", "vSZ-E"],
-        supportedSwitches: ["ICX 7650", "ICX 7850"],
-        platforms: {
-          hypervisors: ["Debian KVM", "OpenStack", "Hyper-V 2022", "Nutanix CE 2.1", "VMware ESXi 6.7+"],
-          clouds: ["AWS", "Azure"],
-          unsupported: ["Sangfor HCI", "VMware Workstation", "Oracle VirtualBox"],
-          note: "Deploying vSZ on unsupported platforms may prevent Ruckus from providing support."
-        }
-      },
-      {
-        id: "7.0.0",
-        status: "GA",
-        notes: "Supports Wi-Fi 6E APs like R560, R670",
-        supportedAPs: ["R560", "R670", "T670"],
-        supportedSZModels: ["vSZ-H", "vSZ-E"],
-        supportedSwitches: ["ICX 7850", "ICX 8200"],
-        platforms: {
-          hypervisors: ["Debian KVM", "OpenStack", "Hyper-V 2022", "Nutanix CE 2.1", "Proxmox VE 8.2.2", "Rocky Linux 9.4", "VMware ESXi 7.0+"],
-          clouds: ["AWS", "Google Cloud", "Azure"],
-          unsupported: ["Sangfor HCI", "VMware Workstation", "Oracle VirtualBox"],
-          note: "SmartZone 7.0.0 introduces support for Rocky Linux and Proxmox VE."
-        }
-      },
-      {
-        id: "7.1.0",
-        status: "LT-GA",
-        notes: "Supports Wi-Fi 7 APs like R670, T670sn",
-        supportedAPs: ["R670", "T670sn", "R770"],
-        supportedSZModels: ["vSZ-H", "vSZ-E"],
-        supportedSwitches: ["ICX 8200", "ICX 8300"],
-        platforms: {
-          hypervisors: ["Debian KVM", "OpenStack", "Hyper-V 2022", "Nutanix CE 2.1", "Proxmox VE 8.2.2", "Rocky Linux 9.4", "VMware ESXi 7.0+"],
-          clouds: ["AWS", "Google Cloud", "Azure"],
-          unsupported: ["Sangfor HCI", "VMware Workstation", "Oracle VirtualBox"],
-          note: "SmartZone 7.1.0 is optimized for Wi-Fi 7 and high-density deployments."
+    const resourceData = {
+      "7.1.0": {
+        "highscale": {
+          "on_prem": [
+            { "maxAPs": 100, "vCPU": 2, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
+            { "maxAPs": 500, "vCPU": 4, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
+            { "maxAPs": 1000, "vCPU": 4, "RAM": 32, "Disk": 150, "DiskIO": 20, "nodes": 2 },
+            { "maxAPs": 3000, "vCPU": 8, "RAM": 32, "Disk": 300, "DiskIO": 25, "nodes": 2 },
+            { "maxAPs": 6000, "vCPU": 16, "RAM": 64, "Disk": 300, "DiskIO": 35, "nodes": 3 },
+            { "maxAPs": 10000, "vCPU": 24, "RAM": 48, "Disk": 600, "DiskIO": 45, "nodes": 4 },
+            { "maxAPs": 30000, "vCPU": 24, "RAM": 56, "Disk": 600, "DiskIO": 45, "nodes": 4 }
+          ]
+        },
+        "essentials": {
+          "on_prem": [
+            { "maxAPs": 100, "vCPU": 2, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
+            { "maxAPs": 500, "vCPU": 4, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
+            { "maxAPs": 1024, "vCPU": 8, "RAM": 20, "Disk": 250, "DiskIO": 20, "nodes": 2 }
+          ]
         }
       }
-    ];
+};
+      resourceData["7.0.0"] = JSON.parse(JSON.stringify(resourceData["7.1.0"]));
+      resourceData["6.1.2"] = JSON.parse(JSON.stringify(resourceData["7.1.0"]));
 
-    const resourceProfiles = {
-      "6.1.2": [
-        { max: 100, CPU: 4, RAM: 13, Storage: 150, nodes: 1 },
-        { max: 500, CPU: 4, RAM: 16, Storage: 150, nodes: 1 },
-        { max: 1024, CPU: 8, RAM: 20, Storage: 250, nodes: 2 },
-        { max: 3000, CPU: 8, RAM: 20, Storage: 250, nodes: 2 }
-      ],
-      "7.0.0": [
-        { max: 100, CPU: 2, RAM: 16, Storage: 150, DiskIO: 15, nodes: 1 },
-        { max: 500, CPU: 4, RAM: 16, Storage: 150, DiskIO: 15, nodes: 1 },
-        { max: 1000, CPU: 4, RAM: 32, Storage: 150, DiskIO: 20, nodes: 2 },
-        { max: 3000, CPU: 8, RAM: 32, Storage: 300, DiskIO: 25, nodes: 2 },
-        { max: 6000, CPU: 16, RAM: 64, Storage: 300, DiskIO: 35, nodes: 3 },
-        { max: 10000, CPU: 24, RAM: 48, Storage: 600, DiskIO: 45, nodes: 4 },
-        { max: 30000, CPU: 24, RAM: 56, Storage: 600, DiskIO: 45, nodes: 4 }
-      ],
-      "7.1.0": [
-        { max: 100, CPU: 2, RAM: 16, Storage: 150, DiskIO: 15, nodes: 1 },
-        { max: 500, CPU: 4, RAM: 16, Storage: 150, DiskIO: 15, nodes: 1 },
-        { max: 1000, CPU: 4, RAM: 32, Storage: 150, DiskIO: 20, nodes: 2 },
-        { max: 3000, CPU: 8, RAM: 32, Storage: 300, DiskIO: 25, nodes: 2 },
-        { max: 6000, CPU: 16, RAM: 64, Storage: 300, DiskIO: 35, nodes: 3 },
-        { max: 10000, CPU: 24, RAM: 48, Storage: 600, DiskIO: 45, nodes: 4 },
-        { max: 30000, CPU: 24, RAM: 56, Storage: 600, DiskIO: 45, nodes: 4 }
-      ]
-    };
-
-    const controllerOverhead = {
-      essentials: { CPU: 0, RAM: 0, Storage: 0, maxNodes: 2 },
-      highscale: { CPU: 2, RAM: 4, Storage: 50, maxNodes: 4 }
-    };
-
-    const deploymentOverhead = {
-      on_prem: { CPU: 0, RAM: 0, Storage: 0 },
-      nutanix: { CPU: 1, RAM: 6, Storage: 50 },
-      cloud:   { CPU: 2, RAM: 4, Storage: 100 }
-    };
-
-    const deployNote = {
-      on_prem: "On-Prem deployment: No additional overhead applied.",
-      nutanix: "Nutanix deployment: Includes controller RAM and storage overhead.",
-      cloud: "Cloud deployment: Includes buffer for virtualization overhead."
-    };
-
-    const deviceImpact = {
-      ICX: { CPU: 0.05, RAM: 0.1, Storage: 0.2 },
-      Edge: { CPU: 0.1, RAM: 0.2, Storage: 0.4 }
-    };
-
-    function getTier(apCount, version) {
-      const controllerType = document.getElementById("controllerType").value;
-      const tiers = resourceProfiles[version];
-      const filtered = controllerType === "essentials" ? tiers.filter(t => t.max <= 1024) : tiers;
-      return filtered.find(t => apCount <= t.max) || filtered[filtered.length - 1];
-    }
-
-    function updateVersionDetails() {
-      const version = document.getElementById("version").value;
-      const selected = fallbackVersions.find(v => v.id === version);
-      document.getElementById("versionNote").textContent = selected?.notes || "";
-      document.getElementById("apList").innerHTML = `<strong>Supported APs:</strong> ${selected.supportedAPs.join(", ")}`;
-      document.getElementById("szList").innerHTML = `<strong>Supported SZ Models:</strong> ${selected.supportedSZModels.join(", ")}`;
-      document.getElementById("switchList").innerHTML = `<strong>Supported ICX Switches:</strong> ${selected.supportedSwitches.join(", ")}`;
-      document.getElementById("platformInfo").innerHTML = `
-        <strong>Supported Platforms (${selected.id}):</strong><br>
-        Hypervisors: ${selected.platforms.hypervisors.join(", ")}<br>
-        Public Cloud: ${selected.platforms.clouds.join(", ")}<br>
-        <span class="text-red-600">Unsupported: ${selected.platforms.unsupported.join(", ")}</span><br>
-        <em>${selected.platforms.note}</em>
-      `;
-    }
-
-    function showPopup(message) {
-      document.getElementById("popupMessage").textContent = message;
-      document.getElementById("popup").classList.remove("hidden");
-    }
-
-    function closePopup() {
-      document.getElementById("popup").classList.add("hidden");
-    }
-
-    function runCalculator() {
-      const version = document.getElementById("version").value;
-      const controllerType = document.getElementById("controllerType").value;
-      const deploy = document.getElementById("deploymentType").value;
-      const dual = parseInt(document.getElementById("AP_dual_band_qty").value) || 0;
-      const tri = parseInt(document.getElementById("AP_tri_band_qty").value) || 0;
-      const icx = parseInt(document.getElementById("ICX_qty").value) || 0;
-      const edge = parseInt(document.getElementById("Edge_qty").value) || 0;
-
-      const totalAPs = dual + tri;
-
-      let limitMsg = "";
-      if (totalAPs > 30000) limitMsg += "- APs must not exceed 30,000\n";
-      if (icx > 5000) limitMsg += "- ICX Switches must not exceed 5,000\n";
-      if (edge > 5000) limitMsg += "- Edge Devices must not exceed 5,000\n";
-      if (limitMsg) {
-        showPopup("You've exceeded one or more input limits:\n" + limitMsg);
-        return;
+      function populateVersionDropdown(versions) {
+        const select = document.getElementById("version");
+        versions.forEach(v => {
+          const opt = document.createElement("option");
+          opt.value = v;
+          opt.textContent = v;
+          select.appendChild(opt);
+        });
       }
 
-      const essentialsWarning = document.getElementById("essentialsWarning");
-      if (controllerType === "essentials" && totalAPs > 1024) {
-        essentialsWarning.textContent = "⚠️ vSZ-Essentials supports up to ~1,024 APs. Consider switching to vSZ-High Scale.";
-        essentialsWarning.classList.remove("hidden");
-      } else {
-        essentialsWarning.classList.add("hidden");
+      function getTier(apCount, version, controllerType, deploymentType) {
+        const versionData = resourceData[version];
+        const controllerData = versionData?.[controllerType];
+        const tiers = controllerData?.[deploymentType] || controllerData?.["on_prem"];
+        return tiers?.find(t => apCount <= t.maxAPs) || tiers?.[tiers.length - 1];
       }
 
-      const tier = getTier(totalAPs, version);
-      const overhead = controllerOverhead[controllerType];
-      const deployOverhead = deploymentOverhead[deploy];
+      function showPopup(message) {
+        document.getElementById("popupMessage").textContent = message;
+        document.getElementById("popup").classList.remove("hidden");
+      }
 
-      const extraCPU = icx * deviceImpact.ICX.CPU + edge * deviceImpact.Edge.CPU;
-      const extraRAM = icx * deviceImpact.ICX.RAM + edge * deviceImpact.Edge.RAM;
-      const extraStorage = icx * deviceImpact.ICX.Storage + edge * deviceImpact.Edge.Storage;
+      function closePopup() {
+        document.getElementById("popup").classList.add("hidden");
+      }
 
-      const finalCPU = Math.ceil(tier.CPU + extraCPU + overhead.CPU + deployOverhead.CPU);
-      const finalRAM = Math.ceil(tier.RAM + extraRAM + overhead.RAM + deployOverhead.RAM);
-      const finalStorage = Math.ceil(tier.Storage + extraStorage + overhead.Storage + deployOverhead.Storage);
+      function runCalculator() {
+  const version = document.getElementById("version").value;
+  const controllerType = document.getElementById("controllerType").value;
+  const deploymentType = document.getElementById("deploymentType").value;
+  const dual = parseInt(document.getElementById("AP_dual_band_qty").value) || 0;
+  const tri = parseInt(document.getElementById("AP_tri_band_qty").value) || 0;
+  const icx = parseInt(document.getElementById("ICX_qty").value) || 0;
+  const edge = parseInt(document.getElementById("Edge_qty").value) || 0;
 
-      const output = `
-        <strong>Recommended Resource Requirements:</strong><br>
-        SmartZone Version: ${version}<br>
-        Controller Type: ${controllerType}<br>
-        Deployment Type: ${deploy}<br>
-        Total APs: ${totalAPs}<br><br>
-        <strong>CPU Cores:</strong> ${finalCPU}<br>
-        <strong>RAM:</strong> ${finalRAM} GB<br>
-        <strong>Storage:</strong> ${finalStorage} GB<br>
-        <strong>Disk I/O:</strong> ${tier.DiskIO || "N/A"} MiB/s<br>
-        <strong>Recommended Nodes:</strong> ${Math.min(tier.nodes, overhead.maxNodes)}<br><br>
-        <em class="text-sm text-gray-600">${deployNote[deploy]}</em>
-      `;
+  const totalAPs = dual + tri;
 
-      document.getElementById("results").innerHTML = output;
-    }
+  let limitMsg = "";
+  if (totalAPs > 30000) limitMsg += "- APs must not exceed 30,000\n";
+  if (icx > 5000) limitMsg += "- ICX Switches must not exceed 5,000\n";
+  if (edge > 5000) limitMsg += "- Edge Devices must not exceed 5,000\n";
+  if (limitMsg) {
+    showPopup("You've exceeded one or more input limits:\n" + limitMsg);
+    return;
+  }
 
-    window.onload = () => {
-      fallbackVersions.forEach(v => {
-        const opt = document.createElement("option");
-        opt.value = v.id;
-        opt.textContent = `${v.id} (${v.status})`;
-        document.getElementById("version").appendChild(opt);
-      });
-      updateVersionDetails();
-      document.getElementById("version").onchange = updateVersionDetails;
-    };
+  const essentialsWarning = document.getElementById("essentialsWarning");
+  if (controllerType === "essentials" && totalAPs > 1024) {
+    essentialsWarning.textContent = "⚠️ vSZ-Essentials supports up to ~1,024 APs. Consider switching to vSZ-High Scale.";
+    essentialsWarning.classList.remove("hidden");
+  } else {
+    essentialsWarning.classList.add("hidden");
+  }
+
+  const tier = getTier(totalAPs, version, controllerType, deploymentType);
+  if (!tier) {
+    document.getElementById("results").innerHTML = `<span class="text-red-600">No matching resource profile found for your selection.</span>`;
+    return;
+  }
+
+  // RUCKUS official adjustments
+  const apToSwitchRatio = 5;
+  const maxSwitches = Math.floor(totalAPs / apToSwitchRatio);
+  const excessSwitches = Math.max(0, icx - maxSwitches);
+
+  const switchCPU = Math.ceil(excessSwitches / 1000) * 2;
+  const switchRAM = Math.ceil(excessSwitches / 1000) * 4;
+  const switchIO  = Math.ceil(excessSwitches / 1000) * 10;
+
+  const edgeCPU = Math.ceil(edge / 2000);
+  const edgeRAM = Math.ceil(edge / 2000) * 2;
+  const edgeIO  = Math.ceil(edge / 2000) * 5;
+
+  const finalCPU = tier.vCPU + switchCPU + edgeCPU;
+  const finalRAM = tier.RAM + switchRAM + edgeRAM;
+  const finalDiskIO = tier.DiskIO + switchIO + edgeIO;
+
+  const output = `
+    <strong>Recommended Resource Requirements:</strong><br>
+    SmartZone Version: ${version}<br>
+    Controller Type: ${controllerType}<br>
+    Deployment Type: ${deploymentType}<br>
+    Total APs: ${totalAPs}<br>
+    ICX Switches: ${icx} (Excess: ${excessSwitches})<br>
+    Edge Devices: ${edge}<br><br>
+    <strong>CPU Cores:</strong> ${finalCPU}<br>
+    <strong>RAM:</strong> ${finalRAM} GB<br>
+    <strong>Storage:</strong> ${tier.Disk} GB<br>
+    <strong>Disk I/O:</strong> ${finalDiskIO} MiB/s<br>
+    <strong>Recommended Nodes:</strong> ${tier.nodes}<br>
+    ${tier.awsInstance ? `<strong>AWS Instance:</strong> ${tier.awsInstance}<br>` : ""}
+    ${tier.azureInstance ? `<strong>Azure Instance:</strong> ${tier.azureInstance}<br>` : ""}
+    ${tier.notes ? `<em class="text-sm text-gray-600">${tier.notes}</em>` : ""}
+  `;
+
+  document.getElementById("results").innerHTML = output;
+}
+
+
+      window.onload = () => {
+        populateVersionDropdown(Object.keys(resourceData));
+      };
   </script>
 </body>
 </html>
