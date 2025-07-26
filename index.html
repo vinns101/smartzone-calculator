@@ -69,7 +69,6 @@
     <div class="text-xs text-gray-500 mt-4">Profiles last updated: July 2025</div>
   </div>
 
-  <!-- Custom Popup -->
   <div id="popup" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
     <div class="bg-white p-6 rounded shadow-lg max-w-md text-center">
       <h3 class="text-lg font-semibold mb-2 text-red-600">Input Limit Exceeded</h3>
@@ -79,40 +78,66 @@
   </div>
 
   <script>
-    const resourceData = {
-      "7.1.0": {
-        "highscale": {
-          "on_prem": [
-            { "maxAPs": 100, "vCPU": 2, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
-            { "maxAPs": 500, "vCPU": 4, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
-            { "maxAPs": 1000, "vCPU": 4, "RAM": 32, "Disk": 150, "DiskIO": 20, "nodes": 2 },
-            { "maxAPs": 3000, "vCPU": 8, "RAM": 32, "Disk": 300, "DiskIO": 25, "nodes": 2 },
-            { "maxAPs": 6000, "vCPU": 16, "RAM": 64, "Disk": 300, "DiskIO": 35, "nodes": 3 },
-            { "maxAPs": 10000, "vCPU": 24, "RAM": 48, "Disk": 600, "DiskIO": 45, "nodes": 4 },
-            { "maxAPs": 30000, "vCPU": 24, "RAM": 56, "Disk": 600, "DiskIO": 45, "nodes": 4 }
-          ]
-        },
-        "essentials": {
-          "on_prem": [
-            { "maxAPs": 100, "vCPU": 2, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
-            { "maxAPs": 500, "vCPU": 4, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
-            { "maxAPs": 1024, "vCPU": 8, "RAM": 20, "Disk": 250, "DiskIO": 20, "nodes": 2 }
-          ]
-        }
-      }
+const resourceData = {
+  "7.1.0": {
+    "highscale": {
+      "on_prem": [
+        { "maxAPs": 100, "vCPU": 2, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
+        { "maxAPs": 500, "vCPU": 4, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
+        { "maxAPs": 1000, "vCPU": 4, "RAM": 32, "Disk": 150, "DiskIO": 20, "nodes": 2 },
+        { "maxAPs": 3000, "vCPU": 8, "RAM": 32, "Disk": 300, "DiskIO": 25, "nodes": 2 },
+        { "maxAPs": 6000, "vCPU": 16, "RAM": 64, "Disk": 300, "DiskIO": 35, "nodes": 3 },
+        { "maxAPs": 10000, "vCPU": 24, "RAM": 48, "Disk": 600, "DiskIO": 45, "nodes": 4 },
+        { "maxAPs": 30000, "vCPU": 24, "RAM": 56, "Disk": 600, "DiskIO": 45, "nodes": 4 },
+        { "maxAPs": Infinity, "vCPU": 28, "RAM": 64, "Disk": 600, "DiskIO": 55, "nodes": 4 }
+      ],
+      "cloud": [
+        { "maxAPs": 100, "vCPU": 4, "RAM": 20, "Disk": 150, "DiskIO": 20, "nodes": 1 },
+        { "maxAPs": 500, "vCPU": 6, "RAM": 20, "Disk": 150, "DiskIO": 20, "nodes": 1 },
+        { "maxAPs": 1000, "vCPU": 6, "RAM": 36, "Disk": 150, "DiskIO": 25, "nodes": 2 },
+        { "maxAPs": 3000, "vCPU": 10, "RAM": 36, "Disk": 300, "DiskIO": 30, "nodes": 2 },
+        { "maxAPs": 6000, "vCPU": 18, "RAM": 68, "Disk": 300, "DiskIO": 40, "nodes": 3 },
+        { "maxAPs": 10000, "vCPU": 26, "RAM": 52, "Disk": 600, "DiskIO": 50, "nodes": 4 },
+        { "maxAPs": 30000, "vCPU": 26, "RAM": 60, "Disk": 600, "DiskIO": 50, "nodes": 4 },
+        { "maxAPs": Infinity, "vCPU": 30, "RAM": 68, "Disk": 600, "DiskIO": 60, "nodes": 4 }
+      ],
+      "nutanix": [
+        { "maxAPs": 100, "vCPU": 3, "RAM": 18, "Disk": 150, "DiskIO": 18, "nodes": 1 },
+        { "maxAPs": 500, "vCPU": 5, "RAM": 18, "Disk": 150, "DiskIO": 18, "nodes": 1 },
+        { "maxAPs": 1000, "vCPU": 5, "RAM": 34, "Disk": 150, "DiskIO": 23, "nodes": 2 },
+        { "maxAPs": 3000, "vCPU": 9, "RAM": 34, "Disk": 300, "DiskIO": 28, "nodes": 2 },
+        { "maxAPs": 6000, "vCPU": 17, "RAM": 66, "Disk": 300, "DiskIO": 38, "nodes": 3 },
+        { "maxAPs": 10000, "vCPU": 25, "RAM": 50, "Disk": 600, "DiskIO": 48, "nodes": 4 },
+                { "maxAPs": 30000, "vCPU": 25, "RAM": 58, "Disk": 600, "DiskIO": 48, "nodes": 4 },
+        { "maxAPs": Infinity, "vCPU": 28, "RAM": 64, "Disk": 600, "DiskIO": 55, "nodes": 4 }
+      ]
+    },
+    "essentials": {
+      "on_prem": [
+        { "maxAPs": 100, "vCPU": 2, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
+        { "maxAPs": 500, "vCPU": 4, "RAM": 16, "Disk": 150, "DiskIO": 15, "nodes": 1 },
+        { "maxAPs": 1024, "vCPU": 8, "RAM": 20, "Disk": 250, "DiskIO": 20, "nodes": 2 },
+        { "maxAPs": Infinity, "vCPU": 10, "RAM": 24, "Disk": 250, "DiskIO": 25, "nodes": 2 }
+      ],
+      "cloud": [
+        { "maxAPs": 100, "vCPU": 4, "RAM": 20, "Disk": 150, "DiskIO": 20, "nodes": 1 },
+        { "maxAPs": 500, "vCPU": 6, "RAM": 20, "Disk": 150, "DiskIO": 20, "nodes": 1 },
+        { "maxAPs": 1024, "vCPU": 10, "RAM": 24, "Disk": 250, "DiskIO": 25, "nodes": 2 },
+        { "maxAPs": Infinity, "vCPU": 12, "RAM": 28, "Disk": 250, "DiskIO": 30, "nodes": 2 }
+      ],
+      "nutanix": [
+        { "maxAPs": 100, "vCPU": 3, "RAM": 18, "Disk": 150, "DiskIO": 18, "nodes": 1 },
+        { "maxAPs": 500, "vCPU": 5, "RAM": 18, "Disk": 150, "DiskIO": 18, "nodes": 1 },
+        { "maxAPs": 1024, "vCPU": 9, "RAM": 22, "Disk": 250, "DiskIO": 23, "nodes": 2 },
+        { "maxAPs": Infinity, "vCPU": 11, "RAM": 26, "Disk": 250, "DiskIO": 28, "nodes": 2 }
+      ]
+    }
+  }
 };
-      resourceData["7.0.0"] = JSON.parse(JSON.stringify(resourceData["7.1.0"]));
-      resourceData["6.1.2"] = JSON.parse(JSON.stringify(resourceData["7.1.0"]));
 
-      function populateVersionDropdown(versions) {
-        const select = document.getElementById("version");
-        versions.forEach(v => {
-          const opt = document.createElement("option");
-          opt.value = v;
-          opt.textContent = v;
-          select.appendChild(opt);
-        });
-      }
+resourceData["7.0.0"] = JSON.parse(JSON.stringify(resourceData["7.1.0"]));
+resourceData["6.1.2"] = JSON.parse(JSON.stringify(resourceData["7.1.0"]));
+
 const versionSupportData = {
   "7.1.0": {
     supportedAPs: ["R760", "R560", "R750", "T750", "H550"],
@@ -129,8 +154,17 @@ const versionSupportData = {
     unsupported: ["Sangfor HCI", "VMware Workstation", "Oracle VirtualBox"]
   }
 };
-
 versionSupportData["7.0.0"] = JSON.parse(JSON.stringify(versionSupportData["7.1.0"]));
+
+function populateVersionDropdown(versions) {
+  const select = document.getElementById("version");
+  versions.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    select.appendChild(opt);
+  });
+}
 
 function showVersionDetails(version) {
   const data = versionSupportData[version];
@@ -154,23 +188,23 @@ document.getElementById("version").addEventListener("change", (e) => {
   showVersionDetails(e.target.value);
 });
 
-      function getTier(apCount, version, controllerType, deploymentType) {
-        const versionData = resourceData[version];
-        const controllerData = versionData?.[controllerType];
-        const tiers = controllerData?.[deploymentType] || controllerData?.["on_prem"];
-        return tiers?.find(t => apCount <= t.maxAPs) || tiers?.[tiers.length - 1];
-      }
+function getTier(apCount, version, controllerType, deploymentType) {
+  const versionData = resourceData[version];
+  const controllerData = versionData?.[controllerType];
+  const tiers = controllerData?.[deploymentType] || controllerData?.["on_prem"];
+  return tiers?.find(t => apCount <= t.maxAPs) || tiers?.[tiers.length - 1];
+}
 
-      function showPopup(message) {
-        document.getElementById("popupMessage").textContent = message;
-        document.getElementById("popup").classList.remove("hidden");
-      }
+function showPopup(message) {
+  document.getElementById("popupMessage").textContent = message;
+  document.getElementById("popup").classList.remove("hidden");
+}
 
-      function closePopup() {
-        document.getElementById("popup").classList.add("hidden");
-      }
+function closePopup() {
+  document.getElementById("popup").classList.add("hidden");
+}
 
-      function runCalculator() {
+function runCalculator() {
   const version = document.getElementById("version").value;
   const controllerType = document.getElementById("controllerType").value;
   const deploymentType = document.getElementById("deploymentType").value;
@@ -204,7 +238,6 @@ document.getElementById("version").addEventListener("change", (e) => {
     return;
   }
 
-  // RUCKUS official adjustments
   const apToSwitchRatio = 5;
   const maxSwitches = Math.floor(totalAPs / apToSwitchRatio);
   const excessSwitches = Math.max(0, icx - maxSwitches);
@@ -241,13 +274,12 @@ document.getElementById("version").addEventListener("change", (e) => {
 
   document.getElementById("results").innerHTML = output;
   showVersionDetails(version);
-
 }
 
-
-      window.onload = () => {
-        populateVersionDropdown(Object.keys(resourceData));
-      };
-  </script>
+window.onload = () => {
+  populateVersionDropdown(Object.keys(resourceData));
+};
+</script>
 </body>
 </html>
+
